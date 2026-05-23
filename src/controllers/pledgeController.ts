@@ -176,3 +176,138 @@ export async function createPledge(req: Request, res: Response) {
     });
   }
 }
+
+export async function getActiveCampaigns(req: Request, res: Response) {
+  try {
+    const campaigns = await prisma.campaign.findMany({
+      include: {
+        tiers: { orderBy: { targetVolume: 'asc' } },
+        pledges: {
+          where: { status: { in: ['PLEDGED', 'PENDING_PAYMENT', 'CONFIRMED'] } }
+        }
+      }
+    });
+
+    const formattedCampaigns = campaigns.map(c => {
+      const pledgeCount = c.pledges.length;
+      let currentPrice = c.basePrice;
+      for (const tier of c.tiers) {
+        if (tier.isUnlocked || pledgeCount >= tier.targetVolume) {
+          currentPrice = tier.unlockedPrice;
+        }
+      }
+
+      return {
+        id: c.id,
+        title: c.title,
+        basePrice: Number(c.basePrice),
+        targetVolume: c.targetVolume,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        status: c.status,
+        pledgeCount,
+        currentPrice: Number(currentPrice),
+        tiers: c.tiers.map(t => ({
+          id: t.id,
+          targetVolume: t.targetVolume,
+          unlockedPrice: Number(t.unlockedPrice),
+          isUnlocked: t.isUnlocked
+        }))
+      };
+    });
+
+    return res.status(200).json({ success: true, data: formattedCampaigns });
+  } catch (err) {
+    console.error('Error fetching active campaigns:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function forceUnlockCampaign(req: Request, res: Response) {
+  const campaignId = req.params.id as string;
+  try {
+    const campaign = await prisma.campaign.update({
+      where: { id: campaignId },
+      data: { status: 'SUCCESS' }
+    });
+
+    // Unlock all tiers
+    await prisma.tier.updateMany({
+      where: { campaignId },
+      data: { isUnlocked: true }
+    });
+
+    const pledgeCount = await prisma.pledge.count({
+      where: { campaignId, status: { in: ['PLEDGED', 'PENDING_PAYMENT', 'CONFIRMED'] } }
+    });
+
+    // Broadcast Socket.io update event
+    broadcastCampaignUpdate(campaignId, {
+      pledgeCount,
+      currentPrice: Number(campaign.basePrice)
+    });
+
+    return res.status(200).json({ success: true, data: campaign });
+  } catch (err) {
+    console.error('Error force unlocking campaign:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function getDeliveries(req: Request, res: Response) {
+  try {
+    const deliveries = await prisma.delivery.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    const formatted = deliveries.map(d => ({
+      ...d,
+      codAmount: Number(d.codAmount)
+    }));
+    return res.status(200).json({ success: true, data: formatted });
+  } catch (err) {
+    console.error('Error fetching deliveries:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function getOrphans(req: Request, res: Response) {
+  try {
+    const orphans = await prisma.orphanInventory.findMany({
+      where: { status: 'PENDING_INSPECTION' },
+      include: { campaign: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    return res.status(200).json({ success: true, data: orphans });
+  } catch (err) {
+    console.error('Error fetching orphans:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function clearOrphanToFlash(req: Request, res: Response) {
+  const orphanId = req.params.id as string;
+  try {
+    const orphan = await prisma.orphanInventory.update({
+      where: { id: orphanId },
+      data: { status: 'FLASH_STOCK' }
+    });
+    return res.status(200).json({ success: true, data: orphan });
+  } catch (err) {
+    console.error('Error liquidating orphan inventory:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function getTrustLogs(req: Request, res: Response) {
+  try {
+    const logs = await prisma.trustLog.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    return res.status(200).json({ success: true, data: logs });
+  } catch (err) {
+    console.error('Error fetching trust logs:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+

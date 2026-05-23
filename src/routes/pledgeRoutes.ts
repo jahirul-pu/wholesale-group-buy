@@ -1,9 +1,25 @@
 import { Router } from 'express';
-import { createPledge } from '../controllers/pledgeController.js';
+import {
+  createPledge,
+  getActiveCampaigns,
+  forceUnlockCampaign,
+  getDeliveries,
+  getOrphans,
+  clearOrphanToFlash,
+  getTrustLogs
+} from '../controllers/pledgeController.js';
 
 const router = Router();
 
-// Route mapping for Pledge creation
+// Pledge Route
 router.post('/campaigns/:id/pledge', createPledge);
+
+// Analytics and Operations Dashboard Routes
+router.get('/campaigns', getActiveCampaigns);
+router.post('/campaigns/:id/force-unlock', forceUnlockCampaign);
+router.get('/deliveries', getDeliveries);
+router.get('/orphans', getOrphans);
+router.post('/orphans/:id/clear', clearOrphanToFlash);
+router.get('/trust-logs', getTrustLogs);
 
 export default router;
