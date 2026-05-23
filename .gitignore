@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+pg_data/
+pg_dist/
+redis_dist/
+*.log
+postgresql.zip
+redis.zip
+redis5.zip

@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(uuid()) @db.Uuid
+  phoneNumber     String          @unique
+  currentTrust    Int             @default(100)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  trustLogs       TrustLog[]
+  pledges         Pledge[]
+  waitlistEntries WaitlistEntry[]
+}
+
+model TrustLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deltaScore    Int
+  newTotalScore Int
+  reason        String
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+enum CampaignStatus {
+  PENDING
+  ACTIVE
+  SUCCESS
+  FAILED
+}
+
+model Campaign {
+  id                String            @id @default(uuid()) @db.Uuid
+  title             String
+  basePrice         Decimal           @db.Decimal(12, 2)
+  targetVolume      Int
+  startTime         DateTime
+  endTime           DateTime
+  status            CampaignStatus    @default(PENDING)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  tiers             Tier[]
+  pledges           Pledge[]
+  waitlistEntries   WaitlistEntry[]
+  orphanInventories OrphanInventory[]
+
+  @@index([status])
+  @@index([startTime, endTime])
+}
+
+model Tier {
+  id            String   @id @default(uuid()) @db.Uuid
+  campaignId    String   @db.Uuid
+  campaign      Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  targetVolume  Int
+  unlockedPrice Decimal  @db.Decimal(12, 2)
+  isUnlocked    Boolean  @default(false)
+
+  @@unique([campaignId, targetVolume])
+  @@index([campaignId])
+}
+
+enum PledgeStatus {
+  PLEDGED
+  PENDING_PAYMENT
+  CONFIRMED
+  DEFAULTED
+  REJECTED_AT_DOOR
+}
+
+model Pledge {
+  id                       String            @id @default(uuid()) @db.Uuid
+  userId                   String            @db.Uuid
+  user                     User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  campaignId               String            @db.Uuid
+  campaign                 Campaign          @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  lockedPrice              Decimal           @db.Decimal(12, 2)
+  finalPrice               Decimal?          @db.Decimal(12, 2)
+  tokenAdvancePaid         Decimal           @db.Decimal(12, 2)
+  codAmountDue             Decimal           @db.Decimal(12, 2)
+  status                   PledgeStatus      @default(PLEDGED)
+  checkoutWindowExpiresAt  DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  delivery                 Delivery?
+  orphanInventory          OrphanInventory?
+
+  @@index([checkoutWindowExpiresAt])
+  @@index([userId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([campaignId, status])
+}
+
+enum WaitlistStatus {
+  WAITING
+  PROMOTED
+}
+
+model WaitlistEntry {
+  id         String         @id @default(uuid()) @db.Uuid
+  userId     String         @db.Uuid
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaignId String         @db.Uuid
+  campaign   Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  status     WaitlistStatus @default(WAITING)
+  joinedAt   DateTime       @default(now())
+
+  @@unique([userId, campaignId])
+  @@index([userId])
+  @@index([campaignId])
+  @@index([status])
+}
+
+enum Courier {
+  PATHAO
+  REDX
+  STEADFAST
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+  FAILED
+}
+
+model Delivery {
+  id         String         @id @default(uuid()) @db.Uuid
+  pledgeId   String         @unique @db.Uuid
+  pledge     Pledge         @relation(fields: [pledgeId], references: [id], onDelete: Restrict)
+  courier    Courier
+  trackingId String?
+  status     DeliveryStatus @default(PENDING)
+  codAmount  Decimal        @db.Decimal(12, 2)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@index([trackingId])
+  @@index([status])
+}
+
+enum OrphanStatus {
+  PENDING_INSPECTION
+  FLASH_STOCK
+  SOLD
+}
+
+model OrphanInventory {
+  id         String       @id @default(uuid()) @db.Uuid
+  campaignId String       @db.Uuid
+  campaign   Campaign     @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  pledgeId   String?      @unique @db.Uuid
+  pledge     Pledge?      @relation(fields: [pledgeId], references: [id], onDelete: SetNull)
+  status     OrphanStatus @default(PENDING_INSPECTION)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([campaignId])
+  @@index([status])
+}
