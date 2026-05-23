@@ -10,7 +10,12 @@ import {
   getCampaign,
   getUser,
   getUsers,
-  confirmPledgePayment
+  confirmPledgePayment,
+  createCampaign,
+  updateCampaign,
+  deleteCampaign,
+  sendOTP,
+  verifyOTP
 } from '../controllers/pledgeController.js';
 import { dispatchCampaignOrders } from '../controllers/dispatchController.js';
 import { handleCourierWebhook } from '../controllers/webhookController.js';
@@ -18,6 +23,15 @@ import { handleWarehouseIngest } from '../controllers/warehouseController.js';
 import { initiateCheckout, handlePaymentWebhook } from '../controllers/checkoutController.js';
 
 const router = Router();
+
+// Authentication Routes
+router.post('/auth/send-otp', sendOTP);
+router.post('/auth/verify-otp', verifyOTP);
+
+// Admin Route to Create, Update, Delete Campaign
+router.post('/admin/campaigns', createCampaign);
+router.put('/admin/campaigns/:id', updateCampaign);
+router.delete('/admin/campaigns/:id', deleteCampaign);
 
 // Pledge Route
 router.post('/campaigns/:id/pledge', createPledge);

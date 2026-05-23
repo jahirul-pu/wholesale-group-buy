@@ -3,12 +3,14 @@
 import React, { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUserStore, SimulatedUser } from '@/store/useUserStore';
+import { signIn, useSession } from 'next-auth/react';
 import { ShieldCheck, ShieldAlert, Award, ArrowLeft, RefreshCw, LogIn, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { currentUser, setCurrentUser } = useUserStore();
+  const { data: session } = useSession();
 
   // 1. Fetch all seeded users for simulation selection
   const { data: usersResponse, isLoading: isUsersLoading, refetch: refetchUsers } = useQuery({
@@ -34,9 +36,14 @@ export default function ProfilePage() {
   });
   const activeUserDetail = activeUserResponse?.data;
 
-  // Hydrate simulated user from localStorage on mount
+  // Hydrate simulated user from NextAuth session or localStorage on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (session?.user && users.length > 0) {
+      const found = users.find((u: SimulatedUser) => u.phoneNumber === session.user.phoneNumber);
+      if (found) {
+        setCurrentUser(found);
+      }
+    } else if (typeof window !== 'undefined' && !session?.user) {
       const storedId = localStorage.getItem('simulated_user_id');
       if (storedId && !currentUser && users.length > 0) {
         const found = users.find((u: SimulatedUser) => u.id === storedId);
@@ -45,7 +52,7 @@ export default function ProfilePage() {
         }
       }
     }
-  }, [users, currentUser, setCurrentUser]);
+  }, [users, session, currentUser, setCurrentUser]);
 
   // Keep the Zustand store updated when details change
   useEffect(() => {
@@ -64,9 +71,18 @@ export default function ProfilePage() {
     return { label: 'Shadowbanned', color: 'text-red-400 bg-red-500/10 border-red-500/20', desc: 'Pledging disabled. Severe score penalty restrictions.' };
   };
 
-  const handleUserSelect = (user: SimulatedUser) => {
+  const handleUserSelect = async (user: SimulatedUser) => {
     setCurrentUser(user);
-    queryClient.invalidateQueries({ queryKey: ['activeUserDetail', user.id] });
+    try {
+      await signIn('credentials', {
+        phoneNumber: user.phoneNumber,
+        otp: '123456',
+        redirect: false,
+      });
+      queryClient.invalidateQueries();
+    } catch (err) {
+      console.error('Auto login failed:', err);
+    }
   };
 
   return (

@@ -3,7 +3,8 @@
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { socket } from '@/config/socket';
-import { Play, CheckCircle2, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import { Play, CheckCircle2, Lock, Unlock, AlertTriangle, Plus, Trash2, Edit } from 'lucide-react';
+import Link from 'next/link';
 
 interface Tier {
   id: string;
@@ -66,6 +67,26 @@ export default function CampaignVelocity() {
     },
   });
 
+  // 4. Delete Campaign mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (campaignId: string) => {
+      const res = await fetch(`http://127.0.0.1:3000/api/admin/campaigns/${campaignId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete campaign');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+  });
+
+  const handleDeleteClick = (campaignId: string, title: string) => {
+    if (confirm(`Are you sure you want to permanently delete the campaign "${title}" and all its associated data?`)) {
+      deleteMutation.mutate(campaignId);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -84,12 +105,24 @@ export default function CampaignVelocity() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {campaigns.length === 0 ? (
-        <div className="col-span-2 text-center text-slate-500 py-12 border border-dashed border-slate-800 rounded-xl">
-          No campaigns found in system.
-        </div>
-      ) : (
+    <div className="space-y-6">
+      {/* Create Campaign Action Bar */}
+      <div className="flex justify-end">
+        <Link
+          href="/admin/campaigns/new"
+          className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all duration-300 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Create New Campaign</span>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {campaigns.length === 0 ? (
+          <div className="col-span-2 text-center text-slate-500 py-12 border border-dashed border-slate-800 rounded-xl">
+            No campaigns found in system.
+          </div>
+        ) : (
         campaigns.map((campaign) => {
           const progressPercent = Math.min(100, Math.round((campaign.pledgeCount / campaign.targetVolume) * 100));
           const isSuccess = campaign.status === 'SUCCESS';
@@ -106,17 +139,27 @@ export default function CampaignVelocity() {
                   <h3 className="font-semibold text-lg text-white tracking-wide truncate max-w-[200px]">
                     {campaign.title}
                   </h3>
-                  <span
-                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                      isSuccess
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : isActive
-                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
-                    }`}
-                  >
-                    {campaign.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                        isSuccess
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                          : isActive
+                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      }`}
+                    >
+                      {campaign.status}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteClick(campaign.id, campaign.title)}
+                      disabled={deleteMutation.isPending}
+                      className="p-1.5 rounded-lg bg-red-950/20 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-slate-950 transition-all duration-200 cursor-pointer disabled:opacity-50"
+                      title="Delete Campaign"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Pricing detail info */}
@@ -180,12 +223,19 @@ export default function CampaignVelocity() {
                 </div>
               </div>
 
-              {/* Action Button: Force Unlock */}
-              <div className="mt-4 pt-4 border-t border-slate-800/80">
+              {/* Action Buttons */}
+              <div className="mt-4 pt-4 border-t border-slate-800/80 flex gap-3">
+                <Link
+                  href={`/admin/campaigns/${campaign.id}/edit`}
+                  className="flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 border border-slate-800 hover:bg-slate-850 hover:text-white transition duration-200 text-slate-300"
+                >
+                  <Edit className="h-4 w-4" />
+                  Edit
+                </Link>
                 <button
                   onClick={() => forceUnlockMutation.mutate(campaign.id)}
                   disabled={isSuccess || forceUnlockMutation.isPending}
-                  className={`w-full py-2.5 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${
+                  className={`flex-[2] py-2.5 px-4 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${
                     isSuccess
                       ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
                       : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20'
@@ -204,7 +254,7 @@ export default function CampaignVelocity() {
                   ) : (
                     <>
                       <Play className="h-4 w-4" />
-                      Force Unlock (Succeed Campaign)
+                      Force Unlock
                     </>
                   )}
                 </button>
@@ -213,6 +263,7 @@ export default function CampaignVelocity() {
           );
         })
       )}
+      </div>
     </div>
   );
 }

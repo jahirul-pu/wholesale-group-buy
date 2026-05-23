@@ -44,9 +44,9 @@ export default async function Page({ params }: PageProps) {
 
   if (!res.ok) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white flex justify-center items-center">
+      <div className="min-h-screen bg-slate-50 flex justify-center items-center">
         <div className="text-center space-y-4">
-          <p className="text-red-500 font-bold text-lg">Failed to load campaign detail</p>
+          <p className="text-red-600 font-bold text-lg">Failed to load campaign detail</p>
           <p className="text-sm text-slate-500">ID: {id}</p>
         </div>
       </div>

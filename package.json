@@ -8,7 +8,14 @@
     "build": "tsc",
     "db:generate": "prisma generate",
     "db:seed": "prisma db seed",
-    "db:validate": "prisma validate"
+    "db:validate": "prisma validate",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "redis:start": "start cmd /k \"redis_dist\\redis-server.exe redis_dist\\redis.windows.conf\"",
+    "postgres:start": "pg_dist\\pgsql\\bin\\pg_ctl.exe -D pg_data -l pg.log start",
+    "postgres:stop": "pg_dist\\pgsql\\bin\\pg_ctl.exe -D pg_data stop",
+    "services:start": "npm run postgres:start && npm run redis:start",
+    "services:stop": "npm run postgres:stop"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

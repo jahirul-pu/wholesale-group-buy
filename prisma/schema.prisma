@@ -47,6 +47,10 @@ model Campaign {
   startTime         DateTime
   endTime           DateTime
   status            CampaignStatus    @default(PENDING)
+  shortDescription  String            @default("")
+  richContent       String            @default("")
+  images            String[]
+  specifications    Json?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 

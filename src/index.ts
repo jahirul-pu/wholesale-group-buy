@@ -9,7 +9,10 @@ const app = express();
 const httpServer = createServer(app);
 
 // Configure Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://127.0.0.1:3001'],
+  credentials: true,
+}));
 app.use(express.json());
 
 // Expose routing API endpoints

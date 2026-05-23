@@ -53,6 +53,7 @@ export default function PledgeStateMachine({ campaignId }: PledgeStateMachinePro
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentUser.id }),
+        credentials: 'include',
       });
       if (!res.ok) {
         const errorJson = await res.json();

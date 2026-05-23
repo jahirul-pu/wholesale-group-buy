@@ -127,10 +127,12 @@ export default function CascadingPriceCurve({ basePrice }: CascadingPriceCurvePr
                 </div>
               </div>
 
-              {/* Active / Unlocked overlay tag */}
+              {/* Active Pricing tag — inline below progress bar */}
               {isActive && (
-                <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-500/20">
-                  <Check className="h-2.5 w-2.5" /> Active Pricing
+                <div className="mt-3 flex justify-end">
+                  <div className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold border border-emerald-500/20">
+                    <Check className="h-2.5 w-2.5" /> Active Pricing
+                  </div>
                 </div>
               )}
             </div>
