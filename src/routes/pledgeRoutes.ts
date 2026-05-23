@@ -6,7 +6,11 @@ import {
   getDeliveries,
   getOrphans,
   clearOrphanToFlash,
-  getTrustLogs
+  getTrustLogs,
+  getCampaign,
+  getUser,
+  getUsers,
+  confirmPledgePayment
 } from '../controllers/pledgeController.js';
 import { dispatchCampaignOrders } from '../controllers/dispatchController.js';
 import { handleCourierWebhook } from '../controllers/webhookController.js';
@@ -17,6 +21,12 @@ const router = Router();
 // Pledge Route
 router.post('/campaigns/:id/pledge', createPledge);
 router.post('/campaigns/:id/dispatch', dispatchCampaignOrders);
+
+// Campaign Detail and User Detail Routes
+router.get('/campaigns/:id', getCampaign);
+router.get('/users/:id', getUser);
+router.get('/users', getUsers);
+router.post('/pledges/:id/confirm-payment', confirmPledgePayment);
 
 // Webhooks & Warehouse Operations
 router.post('/webhooks/courier', handleCourierWebhook);

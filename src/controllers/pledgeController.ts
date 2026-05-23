@@ -311,3 +311,109 @@ export async function getTrustLogs(req: Request, res: Response) {
   }
 }
 
+export async function getCampaign(req: Request, res: Response) {
+  const campaignId = req.params.id as string;
+  try {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: campaignId },
+      include: {
+        tiers: { orderBy: { targetVolume: 'asc' } },
+        pledges: {
+          where: { status: { in: ['PLEDGED', 'PENDING_PAYMENT', 'CONFIRMED'] } }
+        }
+      }
+    });
+
+    if (!campaign) {
+      return res.status(404).json({ success: false, message: 'Campaign not found' });
+    }
+
+    const pledgeCount = campaign.pledges.length;
+    let currentPrice = campaign.basePrice;
+    for (const tier of campaign.tiers) {
+      if (tier.isUnlocked || pledgeCount >= tier.targetVolume) {
+        currentPrice = tier.unlockedPrice;
+      }
+    }
+
+    const formatted = {
+      id: campaign.id,
+      title: campaign.title,
+      basePrice: Number(campaign.basePrice),
+      targetVolume: campaign.targetVolume,
+      startTime: campaign.startTime,
+      endTime: campaign.endTime,
+      status: campaign.status,
+      pledgeCount,
+      currentPrice: Number(currentPrice),
+      tiers: campaign.tiers.map(t => ({
+        id: t.id,
+        targetVolume: t.targetVolume,
+        unlockedPrice: Number(t.unlockedPrice),
+        isUnlocked: t.isUnlocked
+      }))
+    };
+
+    return res.status(200).json({ success: true, data: formatted });
+  } catch (err) {
+    console.error('Error fetching campaign:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function getUser(req: Request, res: Response) {
+  const userId = req.params.id as string;
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        trustLogs: { orderBy: { createdAt: 'desc' } },
+        pledges: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.status(200).json({ success: true, data: user });
+  } catch (err) {
+    console.error('Error fetching user:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function getUsers(req: Request, res: Response) {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: { phoneNumber: 'asc' }
+    });
+    return res.status(200).json({ success: true, data: users });
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
+export async function confirmPledgePayment(req: Request, res: Response) {
+  const pledgeId = req.params.id as string;
+  const { paymentType } = req.body;
+  try {
+    const pledge = await prisma.pledge.update({
+      where: { id: pledgeId },
+      data: {
+        status: 'CONFIRMED',
+        checkoutWindowExpiresAt: null,
+      }
+    });
+
+    console.log(`💳 [Payment] Pledge ${pledgeId} successfully confirmed via ${paymentType} payment.`);
+    return res.status(200).json({ success: true, data: pledge });
+  } catch (err) {
+    console.error('Error confirming payment:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+
