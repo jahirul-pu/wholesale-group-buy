@@ -168,6 +168,14 @@ async function main() {
     },
   });
 
+  console.log('Adding database constraint for currentTrust...');
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "User" DROP CONSTRAINT IF EXISTS check_trust_non_negative;
+  `);
+  await prisma.$executeRawUnsafe(`
+    ALTER TABLE "User" ADD CONSTRAINT check_trust_non_negative CHECK ("currentTrust" >= 0);
+  `);
+
   console.log('Database seeding completed successfully!');
 }
 
