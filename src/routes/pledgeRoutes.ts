@@ -15,6 +15,7 @@ import {
 import { dispatchCampaignOrders } from '../controllers/dispatchController.js';
 import { handleCourierWebhook } from '../controllers/webhookController.js';
 import { handleWarehouseIngest } from '../controllers/warehouseController.js';
+import { initiateCheckout, handlePaymentWebhook } from '../controllers/checkoutController.js';
 
 const router = Router();
 
@@ -31,6 +32,11 @@ router.post('/pledges/:id/confirm-payment', confirmPledgePayment);
 // Webhooks & Warehouse Operations
 router.post('/webhooks/courier', handleCourierWebhook);
 router.post('/warehouse/ingest', handleWarehouseIngest);
+
+// Payment Gateway Routes
+router.post('/checkout/initiate', initiateCheckout);
+router.get('/webhooks/payment', handlePaymentWebhook);
+router.post('/webhooks/payment', handlePaymentWebhook);
 
 // Analytics and Operations Dashboard Routes
 router.get('/campaigns', getActiveCampaigns);

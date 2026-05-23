@@ -56,3 +56,26 @@ export function broadcastCampaignUpdate(
     ...data,
   });
 }
+
+export function broadcastPaymentConfirmed(
+  pledgeId: string,
+  data: {
+    userId: string;
+    campaignId: string;
+    amountPaid: number;
+    codBalance: number;
+  }
+) {
+  if (!io) {
+    console.warn('⚠️ Socket.io is not initialized yet. Skipping broadcast.');
+    return;
+  }
+
+  console.log(`📢 Broadcasting PAYMENT_CONFIRMED for pledge ${pledgeId}:`, data);
+  
+  io.emit('PAYMENT_CONFIRMED', {
+    pledgeId,
+    ...data,
+  });
+}
+
