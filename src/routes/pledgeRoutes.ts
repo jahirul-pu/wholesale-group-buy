@@ -8,11 +8,13 @@ import {
   clearOrphanToFlash,
   getTrustLogs
 } from '../controllers/pledgeController.js';
+import { dispatchCampaignOrders } from '../controllers/dispatchController.js';
 
 const router = Router();
 
 // Pledge Route
 router.post('/campaigns/:id/pledge', createPledge);
+router.post('/campaigns/:id/dispatch', dispatchCampaignOrders);
 
 // Analytics and Operations Dashboard Routes
 router.get('/campaigns', getActiveCampaigns);
